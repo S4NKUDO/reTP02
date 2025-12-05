@@ -23,3 +23,15 @@ fetch("/GetStatus")
         applyStateButton(startbtn, "off");
     });
     
+startbtn.addEventListener('click', function() {
+    fetch("/ChangeStatus")
+    .then(response => response.text())
+    .then(data => {
+        applyStateButton(startbtn, data);
+        console.info("state :" + data);
+    })
+    .catch(err => {
+        console.error("Error while fetching \"/ChangeStatus\" :" + err)
+        applyStateButton(startbtn, "off");
+    });
+})

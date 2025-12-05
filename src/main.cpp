@@ -5,7 +5,12 @@
 
 // PID (Pour Mijoteuse)
 #include <PID_v1.h>
-double Setpoint;
+
+#define PIN_ACTIVATION  D1
+#define PIN_TEMP A0
+
+
+double Setpoint = 43.0;
 double Input;
 double Output;
 
@@ -57,7 +62,7 @@ void HandleFileRequest()
   httpd.sendHeader("Cache-Control", "max-age=31536000, immutable");
 
   size_t sent = httpd.streamFile(file, GetContentType(filename));
-  Serial.printf("[HTTP] %s: size=%u, sent=%u\n\n", filename.c_str(), (unsigned)file.size(), (unsigned)sent);
+  Serial.printf("[HTTP] %s: size=%u, sent=%u\n", filename.c_str(), (unsigned)file.size(), (unsigned)sent);
 
   file.close();
 }
@@ -68,29 +73,40 @@ void HandleGetStatus()
   httpd.send(200, "text/plain", status.c_str());
 }
 
+void applyChange(bool on){
+  digitalWrite(PIN_ACTIVATION, on ? HIGH : LOW);
+}
+
 void HandleChangeStatus()
 {
-  String response = httpd.arg("status");
-  response.trim();
-  response.toLowerCase();
-  if (response = "on")
+  String response ;
+  if (MIJ_STATUS)
   {
     MIJ_STATUS = false;
+    response = "off";
     // debug
     Serial.println("Mijoteuse [OFF]");
-  } else if (response = "off")
+  } else
   {
     MIJ_STATUS = true;
+    response = "on";
+    // debug
     Serial.println("Mijoteuse [ON]");
   }
+  httpd.send(200, "text/plain", response.c_str());
 }
+
+
 
 void setup()
 {
   Serial.begin(115200);
 
+  pinMode(PIN_ACTIVATION, OUTPUT);
+  applyChange(false);
+
   WiFi.softAP(ssid, pwd);
-  Serial.print(WiFi.softAPIP()); // Mets en claire l'IP de l'access point
+  Serial.println(WiFi.softAPIP()); // Mets en claire l'IP de l'access point
 
   // Request web server
   LittleFS.begin();
@@ -106,4 +122,10 @@ void setup()
 void loop()
 {
   httpd.handleClient(); // le mettre au moins une fois dans le loop pour accéder au site (serveur)
+  if (MIJ_STATUS)
+  {
+    applyChange(true);
+    Serial.println("MIJOTEUSE est allumé !");
+  }else
+    applyChange(false);
 }
